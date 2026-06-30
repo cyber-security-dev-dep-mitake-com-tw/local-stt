@@ -14,3 +14,4 @@ let package = Package(
         .testTarget(name: "LocalSTTCoreTests", dependencies: ["LocalSTTCore"])
     ]
 )
+

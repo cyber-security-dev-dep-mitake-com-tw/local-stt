@@ -37,7 +37,12 @@ struct ContentView: View {
                 ForEach(model.devices) { Text($0.name).tag($0.id) }
             }.frame(maxWidth: 330)
             LevelMeter(levelDB: model.inputLevel, thresholdDB: model.gateConfiguration.thresholdDB)
-            if model.isRecording {
+            if let progress = model.modelDownloadProgress {
+                ProgressView(value: progress).frame(width: 120)
+                Text(progress, format: .percent.precision(.fractionLength(0))).monospacedDigit()
+            } else if !model.isTranscriptionReady {
+                Button("Download Model", systemImage: "arrow.down.circle") { Task { await model.installWhisperModel() } }.buttonStyle(.borderedProminent)
+            } else if model.isRecording {
                 Button("Stop", systemImage: "stop.fill") { Task { await model.stop() } }.buttonStyle(.borderedProminent).tint(.red)
             } else {
                 Button("Record", systemImage: "record.circle") { Task { await model.start() } }.buttonStyle(.borderedProminent).disabled(model.isProcessing)

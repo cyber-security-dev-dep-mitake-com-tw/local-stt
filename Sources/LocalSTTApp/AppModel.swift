@@ -27,6 +27,11 @@ final class AppModel: ObservableObject {
         didSet { if let data = try? JSONEncoder().encode(engineConfiguration) { UserDefaults.standard.set(data, forKey: "engineConfiguration") } }
     }
 
+    var isTranscriptionReady: Bool {
+        FileManager.default.isExecutableFile(atPath: engineConfiguration.whisperBinary)
+            && FileManager.default.fileExists(atPath: engineConfiguration.whisperModel)
+    }
+
     private let capture = AudioCapture()
     private var store: SessionStore?
     private var activeSession: RecordingSession?
@@ -42,12 +47,20 @@ final class AppModel: ObservableObject {
     }
 
     func bootstrap() async {
+        if engineConfiguration.whisperBinary.isEmpty, FileManager.default.isExecutableFile(atPath: "/opt/homebrew/bin/whisper-cli") {
+            engineConfiguration.whisperBinary = "/opt/homebrew/bin/whisper-cli"
+        }
+        if !FileManager.default.isExecutableFile(atPath: engineConfiguration.openCCBinary), FileManager.default.isExecutableFile(atPath: "/opt/homebrew/bin/opencc") {
+            engineConfiguration.openCCBinary = "/opt/homebrew/bin/opencc"
+        }
         devices = AudioCapture.devices(); selectedDeviceID = devices.first?.id ?? ""
         do { store = try SessionStore(); sessions = try await store?.loadSessions() ?? [] }
         catch { status = error.localizedDescription }
+        if !isTranscriptionReady { status = "Setup required: download the local Whisper model" }
     }
 
     func start() async {
+        guard isTranscriptionReady else { status = "Download the local Whisper model before recording"; return }
         guard let device = devices.first(where: { $0.id == selectedDeviceID }), let store else { status = "Select an input device"; return }
         let permission = await AVCaptureDevice.requestAccess(for: .audio)
         guard permission else { status = "Microphone access was denied in System Settings"; return }
@@ -69,13 +82,15 @@ final class AppModel: ObservableObject {
         let audio = await store.directory(for: session.id).appendingPathComponent(session.audioFilename)
         do {
             let engine = LocalInferenceEngine(configuration: engineConfiguration)
-            async let transcriptResult = engine.transcribe(audioURL: audio)
-            async let turnsResult = engine.diarize(audioURL: audio)
-            var transcript = try await transcriptResult
+            var transcript = try await engine.transcribe(audioURL: audio)
             for index in transcript.indices { transcript[index].traditionalText = await engine.convertToTraditional(transcript[index].rawText) }
-            let turns = try await turnsResult
-            session.segments = TurnReconciler.assign(transcript, to: turns)
-            session.speakerCount = Set(turns.map(\.speakerID)).count
+            if let turns = try? await engine.diarize(audioURL: audio), !turns.isEmpty {
+                session.segments = TurnReconciler.assign(transcript, to: turns)
+                session.speakerCount = Set(turns.map(\.speakerID)).count
+            } else {
+                session.segments = transcript.map { var segment = $0; segment.speakerID = "Speaker 1"; return segment }
+                session.speakerCount = transcript.isEmpty ? 0 : 1
+            }
             try await store.save(session); sessions = try await store.loadSessions(); selectedSession = session
             nameProposals = Dictionary(grouping: session.segments, by: \.speakerID).compactMap { speaker, segments in
                 guard let name = segments.lazy.compactMap({ SpokenNameExtractor.extract(from: $0.traditionalText) }).first else { return nil }

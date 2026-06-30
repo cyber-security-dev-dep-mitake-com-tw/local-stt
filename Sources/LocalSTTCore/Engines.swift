@@ -29,14 +29,20 @@ public actor LocalInferenceEngine {
     public let configuration: EngineConfiguration
     public init(configuration: EngineConfiguration) { self.configuration = configuration }
 
-    public func validate() throws {
-        for path in [configuration.whisperBinary, configuration.whisperModel, configuration.sherpaBinary, configuration.segmentationModel, configuration.embeddingModel] {
+    public func validateTranscription() throws {
+        for path in [configuration.whisperBinary, configuration.whisperModel] {
+            guard !path.isEmpty, FileManager.default.fileExists(atPath: path) else { throw EngineError.missingFile(path.isEmpty ? "not configured" : path) }
+        }
+    }
+
+    public func validateDiarization() throws {
+        for path in [configuration.sherpaBinary, configuration.segmentationModel, configuration.embeddingModel] {
             guard !path.isEmpty, FileManager.default.fileExists(atPath: path) else { throw EngineError.missingFile(path.isEmpty ? "not configured" : path) }
         }
     }
 
     public func transcribe(audioURL: URL) async throws -> [TranscriptSegment] {
-        try validate()
+        try validateTranscription()
         let prefix = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: prefix.appendingPathExtension("json")) }
         _ = try await ProcessRunner.run(configuration.whisperBinary, arguments: [
@@ -47,7 +53,7 @@ public actor LocalInferenceEngine {
     }
 
     public func diarize(audioURL: URL) async throws -> [SpeakerTurn] {
-        try validate()
+        try validateDiarization()
         let output = try await ProcessRunner.run(configuration.sherpaBinary, arguments: [
             "--segmentation-pyannote-model=\(configuration.segmentationModel)",
             "--embedding-model=\(configuration.embeddingModel)", audioURL.path
