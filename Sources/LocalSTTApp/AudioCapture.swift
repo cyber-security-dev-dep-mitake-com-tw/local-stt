@@ -76,9 +76,12 @@ final class AudioCapture: @unchecked Sendable {
         var address = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyStreamConfiguration, mScope: kAudioDevicePropertyScopeInput, mElement: kAudioObjectPropertyElementMain)
         var size: UInt32 = 0
         guard AudioObjectGetPropertyDataSize(id, &address, 0, nil, &size) == noErr else { return 0 }
-        let list = UnsafeMutableAudioBufferListPointer.allocate(maximumBuffers: Int(size) / MemoryLayout<AudioBuffer>.size)
-        defer { list.deallocate() }
-        guard AudioObjectGetPropertyData(id, &address, 0, nil, &size, list.unsafeMutablePointer) == noErr else { return 0 }
+        let storage = UnsafeMutableRawPointer.allocate(byteCount: Int(size), alignment: MemoryLayout<AudioBufferList>.alignment)
+        defer { storage.deallocate() }
+        storage.initializeMemory(as: UInt8.self, repeating: 0, count: Int(size))
+        let pointer = storage.bindMemory(to: AudioBufferList.self, capacity: 1)
+        guard AudioObjectGetPropertyData(id, &address, 0, nil, &size, pointer) == noErr else { return 0 }
+        let list = UnsafeMutableAudioBufferListPointer(pointer)
         return list.reduce(0) { $0 + Int($1.mNumberChannels) }
     }
 
