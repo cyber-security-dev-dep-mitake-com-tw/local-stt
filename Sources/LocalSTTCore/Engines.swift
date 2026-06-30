@@ -101,8 +101,8 @@ enum WhisperJSONParser {
 
 enum RTTMParser {
     static func parse(_ text: String) -> [SpeakerTurn] {
-        text.split(whereSeparator: \ .isNewline).compactMap { line in
-            let p = line.split(whereSeparator: \ .isWhitespace)
+        text.split(whereSeparator: \.isNewline).compactMap { line in
+            let p = line.split(whereSeparator: \.isWhitespace)
             guard p.count >= 8, p[0] == "SPEAKER", let start = Double(p[3]), let duration = Double(p[4]) else { return nil }
             return SpeakerTurn(start: start, end: start + duration, speakerID: String(p[7]))
         }

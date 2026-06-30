@@ -15,8 +15,8 @@ public enum SRTExporter {
 
 public enum SpokenNameExtractor {
     private static let patterns = [
-        #"(?:大家好[，, ]*)?(?:我是|我叫|我的名字是)\s*([\p{Han}A-Za-z][\p{Han}A-Za-z·・._-]{0,31})"#,
-        #"(?i)(?:my name is|i am|i'm)\s+([A-Za-z][A-Za-z .'-]{0,31})"#
+        #"(?:大家好[，, ]*)?(?:我是|我叫|我的名字是)\s*([\p{Han}·・]{1,8})(?=[，,。.!！?？\s]|$)"#,
+        #"(?i)(?:my name is|i am|i'm)\s+([A-Za-z][A-Za-z'-]{0,31})(?=[,.!！?？\s]|$)"#
     ]
 
     public static func extract(from text: String) -> String? {
@@ -41,5 +41,23 @@ public enum TurnReconciler {
     }
     private static func overlap(_ turn: SpeakerTurn, _ segment: TranscriptSegment) -> TimeInterval {
         max(0, min(turn.end, segment.end) - max(turn.start, segment.start))
+    }
+}
+
+public enum SpeakerMatcher {
+    public static func cosineSimilarity(_ lhs: [Float], _ rhs: [Float]) -> Float? {
+        guard lhs.count == rhs.count, !lhs.isEmpty else { return nil }
+        var dot: Float = 0, leftNorm: Float = 0, rightNorm: Float = 0
+        for index in lhs.indices {
+            dot += lhs[index] * rhs[index]
+            leftNorm += lhs[index] * lhs[index]
+            rightNorm += rhs[index] * rhs[index]
+        }
+        guard leftNorm > 0, rightNorm > 0 else { return nil }
+        return dot / (sqrt(leftNorm) * sqrt(rightNorm))
+    }
+
+    public static func accepted(best: Float, runnerUp: Float?, threshold: Float = 0.75, margin: Float = 0.08) -> Bool {
+        best >= threshold && best - (runnerUp ?? -1) >= margin
     }
 }

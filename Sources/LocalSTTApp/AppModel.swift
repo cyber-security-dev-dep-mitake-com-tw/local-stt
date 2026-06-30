@@ -5,6 +5,11 @@ import SwiftUI
 
 @MainActor
 final class AppModel: ObservableObject {
+    struct NameProposal: Identifiable, Hashable {
+        let id = UUID()
+        let speakerID: String
+        let name: String
+    }
     @Published var devices: [AudioInputDevice] = []
     @Published var selectedDeviceID = ""
     @Published var sessions: [RecordingSession] = []
@@ -15,6 +20,8 @@ final class AppModel: ObservableObject {
     @Published var inputLevel: Float = -60
     @Published var gateOpen = false
     @Published var status = "Ready"
+    @Published var nameProposals: [NameProposal] = []
+    @Published var modelDownloadProgress: Double?
     @Published var gateConfiguration = NoiseGateConfiguration()
     @Published var engineConfiguration: EngineConfiguration {
         didSet { if let data = try? JSONEncoder().encode(engineConfiguration) { UserDefaults.standard.set(data, forKey: "engineConfiguration") } }
@@ -70,6 +77,10 @@ final class AppModel: ObservableObject {
             session.segments = TurnReconciler.assign(transcript, to: turns)
             session.speakerCount = Set(turns.map(\.speakerID)).count
             try await store.save(session); sessions = try await store.loadSessions(); selectedSession = session
+            nameProposals = Dictionary(grouping: session.segments, by: \.speakerID).compactMap { speaker, segments in
+                guard let name = segments.lazy.compactMap({ SpokenNameExtractor.extract(from: $0.traditionalText) }).first else { return nil }
+                return NameProposal(speakerID: speaker, name: name)
+            }
             status = "Finished — \(session.speakerCount) speaker(s)"
         } catch {
             try? await store.save(session); status = "Audio saved; processing failed: \(error.localizedDescription)"
@@ -80,6 +91,29 @@ final class AppModel: ObservableObject {
     func delete(_ session: RecordingSession) async {
         do { try await store?.delete(session); sessions = try await store?.loadSessions() ?? []; if selectedSession?.id == session.id { selectedSession = nil } }
         catch { status = error.localizedDescription }
+    }
+
+    func confirm(_ proposal: NameProposal) async {
+        guard var session = selectedSession, let store else { return }
+        for index in session.segments.indices where session.segments[index].speakerID == proposal.speakerID {
+            session.segments[index].speakerID = proposal.name
+        }
+        do {
+            try await store.save(session); sessions = try await store.loadSessions(); selectedSession = session
+            nameProposals.removeAll { $0.id == proposal.id }
+            status = "Named \(proposal.speakerID) as \(proposal.name)"
+        } catch { status = error.localizedDescription }
+    }
+
+    func dismiss(_ proposal: NameProposal) { nameProposals.removeAll { $0.id == proposal.id } }
+
+    func installWhisperModel() async {
+        modelDownloadProgress = 0; status = "Downloading local Whisper model…"
+        do {
+            let url = try await ModelInstaller().install { [weak self] value in Task { @MainActor in self?.modelDownloadProgress = value } }
+            engineConfiguration.whisperModel = url.path; status = "Whisper model installed and verified"
+        } catch { status = "Model installation failed: \(error.localizedDescription)" }
+        modelDownloadProgress = nil
     }
 
     func exportSRT(_ session: RecordingSession, to url: URL) throws { try SRTExporter.render(session.segments).write(to: url, atomically: true, encoding: .utf8) }

@@ -16,7 +16,7 @@ No audio, transcript, or voiceprint is sent to a server. Network access is not u
 
 1. Open `Package.swift` in Xcode.
 2. Select the `LocalSTT` executable scheme and sign it locally.
-3. Add microphone usage text `LocalSTT records audio for private on-device transcription.` to the generated target's Info settings.
+3. Set the executable target's Base Configuration to `Config/LocalSTT.xcconfig` (or copy its microphone usage and entitlement settings into the target).
 4. Build and run. In Settings, choose the local engine binaries and model files.
 
 From Terminal, validate the core with:

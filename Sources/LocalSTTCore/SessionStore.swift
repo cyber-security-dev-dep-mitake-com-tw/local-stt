@@ -8,7 +8,7 @@ public actor SessionStore {
     private let decoder: JSONDecoder = { let d = JSONDecoder(); d.dateDecodingStrategy = .iso8601; return d }()
 
     public init(root: URL? = nil) throws {
-        let base = try root ?? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent("LocalSTT", isDirectory: true)
+        let base = try (root ?? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent("LocalSTT", isDirectory: true))
         self.root = base
         try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
     }

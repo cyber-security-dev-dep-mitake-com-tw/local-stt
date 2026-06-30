@@ -77,7 +77,7 @@ final class AudioCapture: @unchecked Sendable {
         var size: UInt32 = 0
         guard AudioObjectGetPropertyDataSize(id, &address, 0, nil, &size) == noErr else { return 0 }
         let list = UnsafeMutableAudioBufferListPointer.allocate(maximumBuffers: Int(size) / MemoryLayout<AudioBuffer>.size)
-        defer { free(list.unsafeMutablePointer) }
+        defer { list.deallocate() }
         guard AudioObjectGetPropertyData(id, &address, 0, nil, &size, list.unsafeMutablePointer) == noErr else { return 0 }
         return list.reduce(0) { $0 + Int($1.mNumberChannels) }
     }

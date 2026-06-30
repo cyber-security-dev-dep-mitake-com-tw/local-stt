@@ -1,0 +1,5 @@
+MACOSX_DEPLOYMENT_TARGET = 14.0
+GENERATE_INFOPLIST_FILE = YES
+INFOPLIST_KEY_NSMicrophoneUsageDescription = LocalSTT records audio for private on-device transcription.
+ENABLE_HARDENED_RUNTIME = YES
+CODE_SIGN_ENTITLEMENTS = Config/LocalSTT.entitlements
