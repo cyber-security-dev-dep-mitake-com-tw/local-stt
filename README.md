@@ -24,6 +24,12 @@ LocalSTT 是一套針對 Apple Silicon Mac 的本機端繁體中文語音轉文�
 | OpenCC | 簡體／混合字形轉臺灣繁體 | 建議；若不存在則使用有限的內建字元轉換 |
 | sherpa-onnx | 說話者分段與聲紋嵌入 | 選用／實驗性；需自行指定執行檔及 ONNX 模型 |
 
+
+<img width="719" height="452" alt="Screenshot 2026-06-30 at 5 40 23 PM" src="https://github.com/user-attachments/assets/235ea13f-5677-463b-a763-dd579f168608" />
+
+<img width="916" height="682" alt="Screenshot 2026-06-30 at 5 56 47 PM" src="https://github.com/user-attachments/assets/3701417a-946e-4076-9c94-d2fdf81b87b3" />
+
+
 Whisper 模型源自 OpenAI 的開源語音辨識研究，但本專案不呼叫 OpenAI API，也不使用 OpenAI、Claude、Ollama 或其他雲端 LLM。模型下載完成後，錄音與辨識可完全離線運作。
 
 若 sherpa-onnx 尚未設定，轉錄仍會正常完成，但所有片段會暫時標示為 `Speaker 1`。明確自我介紹仍可將它改名，例如 `Dennis`。真正的多說話者計數、分段及跨工作階段聲紋辨識，必須先完成 sherpa-onnx 引擎與模型設定。
