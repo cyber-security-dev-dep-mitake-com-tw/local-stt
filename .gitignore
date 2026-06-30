@@ -1,4 +1,5 @@
 /.build
+/dist/
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 .swiftpm/xcode/package.xcworkspace/xcuserdata/dennis_leedennis_lee.xcuserdatad/UserInterfaceState.xcuserstate
 .swiftpm/xcode/xcuserdata/dennis_leedennis_lee.xcuserdatad/xcschemes/xcschememanagement.plist
