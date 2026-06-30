@@ -37,6 +37,16 @@ import Testing
     #expect(!SpeakerMatcher.accepted(best: 0.7, runnerUp: nil))
 }
 
+@Test func switchesSpeakerNameAtEachIntroduction() {
+    let segments = [
+        TranscriptSegment(start: 0, end: 10, rawText: "我是Denis", speakerID: "Speaker 1"),
+        TranscriptSegment(start: 10, end: 20, rawText: "我是Leo，我負責韌體", speakerID: "Speaker 1"),
+        TranscriptSegment(start: 20, end: 30, rawText: "接著說明ESP32", speakerID: "Speaker 1"),
+        TranscriptSegment(start: 30, end: 40, rawText: "我是Toby，我負責資安", speakerID: "Speaker 1")
+    ]
+    #expect(SpokenNameAttributor.apply(to: segments).map(\.speakerID) == ["Denis", "Leo", "Leo", "Toby"])
+}
+
 @Test func sessionStoreRoundTrip() async throws {
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     defer { try? FileManager.default.removeItem(at: root) }

@@ -2,6 +2,8 @@
 
 本文件供開發者使用。所有命令都應在專案根目錄執行。
 
+本專案目前建議使用第 9 節的 **GitHub Actions 團隊測試 DMG** 流程。它不需要 Apple Developer Program、Developer ID 或公證，適合內部團隊與興趣專案。第 6 節的 Developer ID 流程只保留給未來需要公開散佈時使用。
+
 ## 1. 安裝開發環境
 
 ### 安裝 Xcode
@@ -77,21 +79,21 @@ open -a Xcode Package.swift
 
 目前 App Sandbox 設為關閉，因為 App 需要執行 Homebrew 安裝的外部工具。若未來把所有引擎內嵌到 App bundle，應重新評估並啟用 Sandbox。
 
-## 4. Debug 與 Release 編譯
+## 4. 除錯版與正式版編譯
 
-Debug：
+除錯版：
 
 ```bash
 swift build --product LocalSTT
 ```
 
-Release：
+正式版：
 
 ```bash
 swift build -c release --product LocalSTT
 ```
 
-Release 執行檔位於：
+正式版執行檔位於：
 
 ```text
 .build/release/LocalSTT
@@ -105,7 +107,7 @@ swift build -c release --product LocalSTT
 git diff --check
 ```
 
-## 5. 建立可發佈的 `.app`
+## 5. 建立團隊測試用 `.app`
 
 目前專案是 Swift Package executable，而不是傳統 `.xcodeproj` Application target。以下流程可建立基本 App bundle。正式長期發佈建議建立 macOS App target，將 `LocalSTTCore` 作為 dependency，以便由 Xcode 管理版本、資產、簽署與 Archive。
 
@@ -159,9 +161,9 @@ codesign --verify --deep --strict --verbose=2 "dist/LocalSTT.app"
 open "dist/LocalSTT.app"
 ```
 
-## 6. Developer ID 簽署與公證
+## 6. 選用：Developer ID 簽署與公證
 
-需要付費 Apple Developer Program 帳號，以及 Keychain 中有效的 `Developer ID Application` 憑證。
+本節不是團隊測試 DMG 的必要步驟。只有需要對外公開散佈、希望 Gatekeeper 正常信任 App 時才需要。此流程需要付費 Apple Developer Program 帳號，以及「鑰匙圈」中有效的 `Developer ID Application` 憑證。
 
 查看身分：
 
@@ -213,7 +215,7 @@ ditto -c -k --keepParent "dist/LocalSTT.app" "dist/LocalSTT-$VERSION-macOS.zip"
 shasum -a 256 "dist/LocalSTT-$VERSION-macOS.zip"
 ```
 
-## 7. 發佈前檢查清單
+## 7. 團隊 DMG 發佈前檢查清單
 
 - 在乾淨的 Apple Silicon Mac 測試安裝、首次啟動與麥克風權限。
 - 測試內建麥克風、USB 麥克風及至少一款音訊介面。
@@ -222,7 +224,7 @@ shasum -a 256 "dist/LocalSTT-$VERSION-macOS.zip"
 - 確認 TXT 與 SRT 匯出為 UTF-8，時間碼正確。
 - 確認明確自我介紹能正確替說話者命名。
 - 確認沒有 sherpa-onnx 時會退回 `Speaker 1`，而不會讓整次轉錄失敗。
-- 使用 `codesign`、`spctl` 與 `stapler` 驗證發佈檔。
+- 使用 `codesign --verify`、`hdiutil verify` 與 SHA-256 驗證團隊測試檔。
 - 在 About／Licenses 畫面及發佈頁列出所有第三方授權。
 
 ## 8. 目前發佈限制
@@ -235,14 +237,25 @@ shasum -a 256 "dist/LocalSTT-$VERSION-macOS.zip"
 4. 啟用 App Sandbox，改用使用者選取檔案的 security-scoped bookmarks。
 5. 建立正式 `.xcodeproj` Application target、App Icon、About／Licenses 與自動化 Archive pipeline。
 
-## 9. GitHub Actions 團隊測試 DMG（不需要 Developer ID）
+## 9. GitHub Actions 團隊測試 DMG（建議流程，不需要 Developer ID）
 
 `.github/workflows/team-dmg.yml` 使用 GitHub 的 Apple Silicon `macos-15` runner，執行測試、Release 編譯、建立 `.app`、ad-hoc 簽署及產生 DMG。此流程不使用 Apple Developer 帳號、憑證或公證。
 
+工作流程會執行以下階段：
+
+1. 取出 repository 原始碼。
+2. 顯示 Xcode、Swift 與 CPU 架構資訊。
+3. 執行全部自動化測試。
+4. 編譯 Apple Silicon 正式版執行檔。
+5. 建立 `.app` bundle 並套用麥克風權限設定。
+6. 使用 ad-hoc 方式簽署 App 與 DMG。
+7. 產生 SHA-256 校驗檔。
+8. 上傳 Actions artifact；若由 `v*` tag 觸發，另外建立 GitHub Release。
+
 ### 手動執行
 
-1. 將變更 push 到 GitHub。
-2. 開啟 repository 的 **Actions**。
+1. 將變更推送到 GitHub。
+2. 開啟 repository 的 **Actions** 頁面。
 3. 選擇 **Build team DMG**。
 4. 按 **Run workflow**，輸入版本。
 5. 完成後，在該次 workflow 的 **Artifacts** 下載 DMG。
@@ -254,7 +267,7 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-workflow 會建立 GitHub Release，附上 DMG 與 SHA-256 檔案。
+工作流程會建立 GitHub Release，附上 DMG 與 SHA-256 檔案。
 
 ### 本機建立相同 DMG
 
@@ -276,4 +289,4 @@ dist/LocalSTT-0.1.0-team-unsigned.dmg.sha256
 brew install whisper-cpp opencc
 ```
 
-這是未公證的內部測試版本。第一次開啟時，在 Finder 對 LocalSTT 按右鍵選擇「打開」並確認；若仍被阻擋，到「系統設定 → 隱私權與安全性」允許此次執行。不要全域停用 Gatekeeper。
+這是未公證的內部測試版本。第一次開啟時，在 Finder 對 LocalSTT 按右鍵選擇「打開」並確認；若仍被阻擋，到「系統設定 → 隱私權與安全性」允許此次執行。不要全域停用 Gatekeeper，也不要把此 DMG 當作已受 Apple 信任或公證的公開版本。

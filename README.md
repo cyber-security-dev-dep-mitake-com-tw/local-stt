@@ -61,9 +61,28 @@ swift run LocalSTT
 
 或使用 Xcode 開啟 `Package.swift`，選擇 `LocalSTT` scheme 與 `My Mac`，再按 `⌘R`。
 
-### GitHub Actions 團隊 DMG
+## 下載與團隊內部發佈
 
-Actions 頁面執行 **Build team DMG** workflow，即可取得 ad-hoc 簽署、未公證的 Apple Silicon DMG；推送 `v*` tag 則會自動建立 GitHub Release。詳見發佈文件。
+本專案預設採用 GitHub Actions 建立團隊測試用 DMG，不需要加入 Apple Developer Program，也不需要 Developer ID 憑證。
+
+- 在 GitHub repository 的 **Actions** 頁面執行 **Build team DMG**，完成後從 **Artifacts** 下載 DMG。
+- 推送 `v*` tag 會自動建立 GitHub Release，並附上 DMG 與 SHA-256 校驗檔。
+- DMG 為 ad-hoc 簽署且未經 Apple 公證，只適合已知且信任此專案的內部團隊使用。
+
+建立版本 Release：
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+隊友安裝 DMG 前，需先執行：
+
+```bash
+brew install whisper-cpp opencc
+```
+
+第一次開啟時，請在 Finder 對 LocalSTT 按右鍵選擇「打開」並確認；若仍被阻擋，到「系統設定 → 隱私權與安全性」允許此次執行。完整流程請參考[安裝、編譯與發佈](docs/install-compile-build-publish.md)。
 
 ## 隱私與限制
 
@@ -72,6 +91,7 @@ Actions 頁面執行 **Build team DMG** workflow，即可取得 ad-hoc 簽署、
 - Noise Gate 只能壓低安靜區段，無法移除與人聲重疊的噪音。
 - 單一麥克風遇到多人同時說話時，無法保證分離出每個人的文字。
 - 目前發佈版本依賴使用者 Mac 上的 Homebrew `whisper-cli` 與 OpenCC；若要提供完全獨立安裝包，需另外內嵌並處理第三方執行檔、模型與授權。
+- 團隊 DMG 未使用 Developer ID 且未經 Apple 公證，因此不適合公開散佈給不熟悉專案來源的一般使用者。
 
 ## 授權
 

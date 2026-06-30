@@ -31,6 +31,21 @@ public enum SpokenNameExtractor {
     }
 }
 
+public enum SpokenNameAttributor {
+    public static func apply(to segments: [TranscriptSegment]) -> [TranscriptSegment] {
+        var activeNameByCluster: [String: String] = [:]
+        return segments.map { segment in
+            var result = segment
+            let cluster = segment.speakerID
+            if let introducedName = SpokenNameExtractor.extract(from: segment.traditionalText) {
+                activeNameByCluster[cluster] = introducedName
+            }
+            if let activeName = activeNameByCluster[cluster] { result.speakerID = activeName }
+            return result
+        }
+    }
+}
+
 public enum TurnReconciler {
     public static func assign(_ segments: [TranscriptSegment], to turns: [SpeakerTurn]) -> [TranscriptSegment] {
         segments.map { segment in

@@ -162,14 +162,11 @@ final class AppModel: ObservableObject {
 
     private func applyingIntroducedNames(to original: RecordingSession) -> RecordingSession {
         var session = original
-        let introducedNames = Dictionary(grouping: session.segments, by: \.speakerID).compactMapValues { segments in
-            segments.lazy.compactMap { SpokenNameExtractor.extract(from: $0.traditionalText) }.first
-        }
-        for index in session.segments.indices {
-            if let name = introducedNames[session.segments[index].speakerID] { session.segments[index].speakerID = name }
-        }
+        session.segments = SpokenNameAttributor.apply(to: session.segments)
+        session.speakerCount = Set(session.segments.map(\.speakerID)).count
         return session
     }
+
 }
 
 private extension Date {
