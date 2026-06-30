@@ -13,6 +13,7 @@ import Testing
 
 @Test func extractsOnlyExplicitIntroductions() {
     #expect(SpokenNameExtractor.extract(from: "大家好，我是王小明") == "王小明")
+    #expect(SpokenNameExtractor.extract(from: "大家好,我是Dennis") == "Dennis")
     #expect(SpokenNameExtractor.extract(from: "My name is Dennis") == "Dennis")
     #expect(SpokenNameExtractor.extract(from: "王小明今天請假") == nil)
 }

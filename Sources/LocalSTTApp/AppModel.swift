@@ -54,7 +54,15 @@ final class AppModel: ObservableObject {
             engineConfiguration.openCCBinary = "/opt/homebrew/bin/opencc"
         }
         devices = AudioCapture.devices(); selectedDeviceID = devices.first?.id ?? ""
-        do { store = try SessionStore(); sessions = try await store?.loadSessions() ?? [] }
+        do {
+            store = try SessionStore()
+            var loaded = try await store?.loadSessions() ?? []
+            for index in loaded.indices {
+                let migrated = applyingIntroducedNames(to: loaded[index])
+                if migrated != loaded[index] { try await store?.save(migrated); loaded[index] = migrated }
+            }
+            sessions = loaded
+        }
         catch { status = error.localizedDescription }
         if !isTranscriptionReady { status = "Setup required: download the local Whisper model" }
     }
@@ -91,11 +99,9 @@ final class AppModel: ObservableObject {
                 session.segments = transcript.map { var segment = $0; segment.speakerID = "Speaker 1"; return segment }
                 session.speakerCount = transcript.isEmpty ? 0 : 1
             }
+            session = applyingIntroducedNames(to: session)
             try await store.save(session); sessions = try await store.loadSessions(); selectedSession = session
-            nameProposals = Dictionary(grouping: session.segments, by: \.speakerID).compactMap { speaker, segments in
-                guard let name = segments.lazy.compactMap({ SpokenNameExtractor.extract(from: $0.traditionalText) }).first else { return nil }
-                return NameProposal(speakerID: speaker, name: name)
-            }
+            nameProposals = []
             status = "Finished — \(session.speakerCount) speaker(s)"
         } catch {
             try? await store.save(session); status = "Audio saved; processing failed: \(error.localizedDescription)"
@@ -152,6 +158,17 @@ final class AppModel: ObservableObject {
                 } catch { self.status = "Recording (live preview unavailable: \(error.localizedDescription))" }
             }
         }
+    }
+
+    private func applyingIntroducedNames(to original: RecordingSession) -> RecordingSession {
+        var session = original
+        let introducedNames = Dictionary(grouping: session.segments, by: \.speakerID).compactMapValues { segments in
+            segments.lazy.compactMap { SpokenNameExtractor.extract(from: $0.traditionalText) }.first
+        }
+        for index in session.segments.indices {
+            if let name = introducedNames[session.segments[index].speakerID] { session.segments[index].speakerID = name }
+        }
+        return session
     }
 }
 

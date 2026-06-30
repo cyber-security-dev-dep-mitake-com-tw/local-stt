@@ -37,6 +37,13 @@ struct ContentView: View {
                 ForEach(model.devices) { Text($0.name).tag($0.id) }
             }.frame(maxWidth: 330)
             LevelMeter(levelDB: model.inputLevel, thresholdDB: model.gateConfiguration.thresholdDB)
+            HStack(spacing: 6) {
+                Image(systemName: "waveform.badge.minus").help("Noise gate threshold")
+                Slider(value: $model.gateConfiguration.thresholdDB, in: -70 ... -10, step: 1)
+                    .frame(width: 120)
+                Text("\(Int(model.gateConfiguration.thresholdDB)) dB")
+                    .font(.caption.monospacedDigit()).frame(width: 48, alignment: .trailing)
+            }.help("Raise the threshold to suppress more background noise; lower it for quiet voices")
             if let progress = model.modelDownloadProgress {
                 ProgressView(value: progress).frame(width: 120)
                 Text(progress, format: .percent.precision(.fractionLength(0))).monospacedDigit()

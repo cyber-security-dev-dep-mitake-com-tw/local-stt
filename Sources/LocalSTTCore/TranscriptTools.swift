@@ -16,6 +16,7 @@ public enum SRTExporter {
 public enum SpokenNameExtractor {
     private static let patterns = [
         #"(?:大家好[，, ]*)?(?:我是|我叫|我的名字是)\s*([\p{Han}·・]{1,8})(?=[，,。.!！?？\s]|$)"#,
+        #"(?:大家好[，, ]*)?(?:我是|我叫|我的名字是)\s*([A-Za-z][A-Za-z'-]{0,31})(?=[，,。.!！?？\s]|$)"#,
         #"(?i)(?:my name is|i am|i'm)\s+([A-Za-z][A-Za-z'-]{0,31})(?=[,.!！?？\s]|$)"#
     ]
 
